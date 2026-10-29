@@ -4,7 +4,7 @@ import { Copy, KeyRound, PlusCircle, Users } from "lucide-react";
 
 const API = "/api";
 
-export default function ReferralManager({ onChange }) {
+export default function ReferralManager({ onChange, adminSecret }) {
   const [name, setName] = useState("");
   const [ambassadors, setAmbassadors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +31,10 @@ export default function ReferralManager({ onChange }) {
   async function createAmbassador(event) {
     event.preventDefault();
     if (!name.trim()) return;
+    if (!adminSecret) {
+      setMessage("Enter the organizer admin secret in Registration verification first.");
+      return;
+    }
 
     setSaving(true);
     setMessage("");
@@ -38,7 +42,7 @@ export default function ReferralManager({ onChange }) {
     try {
       const response = await fetch(`${API}/ambassadors`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
         body: JSON.stringify({ name: name.trim() }),
       });
 
@@ -94,12 +98,13 @@ export default function ReferralManager({ onChange }) {
             maxLength={100}
             required
           />
-          <button type="submit" disabled={saving}>
+          <button type="submit" disabled={saving || !adminSecret}>
             <PlusCircle size={17} />
             {saving ? "Generating..." : "Generate code"}
           </button>
         </div>
       </form>
+      {!adminSecret && <p className="muted">Enter the organizer secret in Registration verification to create codes.</p>}
 
       {message && <p className="referral-message" role="status">{message}</p>}
 
