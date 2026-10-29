@@ -8,8 +8,6 @@ A full-stack web application built for the NxtWave Growth Challenge to manage st
 
 **GitHub Repository:** https://github.com/meh2005/nxtwave-growth-tracker
 
-> **Note:** The application is hosted on Render's free tier. The web service may take a little time to start after inactivity, and the free PostgreSQL database has a limited lifetime.
-
 ## 🎯 Project Objective
 
 The objective is to support a student outreach campaign targeting 500 verified registrations within seven days with a proposed budget of ₹2,000.
@@ -94,6 +92,7 @@ npm.cmd run server
 ```
 
 Keep this terminal running.
+(for the hosted version - use "12345" as ADMIN code) 
 
 ### 5. Start the frontend
 
@@ -157,15 +156,6 @@ The following checks passed after the PostgreSQL migration:
 
 These checks validate code quality, production build generation, and server syntax. Live registration and organizer workflows should also be tested after deployment.
 
-## ⚠️ Free-Tier Limitations
-
-This prototype uses Render's free hosting options.
-
-- The web service may spin down after inactivity and take time to respond when accessed again.
-- Render Free PostgreSQL has a limited lifetime and storage capacity.
-- Export any data you need before the database expires.
-- This setup is intended for a prototype and challenge demonstration, not permanent production data storage.
-
 ## 🔮 Future Improvements
 
 - Individual organizer accounts and role-based access control.
@@ -181,5 +171,3 @@ This prototype uses Render's free hosting options.
 Built to explore practical campaign management through student registration workflows, referral attribution, verification, and data-driven growth tracking.
 
 ---
-
-*The campaign target and proposed budget describe the project plan; they do not imply that 500 registrations have already been achieved.*
