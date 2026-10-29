@@ -8,6 +8,8 @@ A full-stack web application built for the NxtWave Growth Challenge to manage st
 
 **GitHub Repository:** https://github.com/meh2005/nxtwave-growth-tracker
 
+**Growth Plan Presentation:** https://canva.link/7qyqp4nesim3ryz
+
 ## 🎯 Project Objective
 
 The objective is to support a student outreach campaign targeting 500 verified registrations within seven days with a proposed budget of ₹2,000.
