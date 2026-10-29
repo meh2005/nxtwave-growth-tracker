@@ -9,7 +9,8 @@ A full-stack web application built for the NxtWave Growth Challenge to manage st
 **GitHub Repository:** https://github.com/meh2005/nxtwave-growth-tracker
 
 **Growth Plan Presentation:** https://canva.link/7qyqp4nesim3ryz
-**Demo Video with Explanation:** https://github.com/meh2005/nxtwave-growth-tracker/blob/main/Mehrosh%20Sultana%20NxtWave%20Growth%20Challenge.mp4
+
+**Demo Video with Explanation:** https://drive.google.com/file/d/1xYzP3CpsFlSsNtGTfjdsc6LX2-iCDbX1/view?usp=sharing
 
 ## 🎯 Project Objective
 
