@@ -2,15 +2,25 @@
 import express from "express";
 import cors from "cors";
 import Database from "better-sqlite3";
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { Buffer } from "node:buffer";
+import { dirname, resolve } from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3001;
+const HOST = "0.0.0.0";
+const SERVER_DIR = dirname(fileURLToPath(import.meta.url));
+const DIST_DIR = resolve(SERVER_DIR, "dist");
 
 app.use(cors());
 app.use(express.json());
 
-const db = new Database("growth-tracker.db");
+// Preserve the existing cwd-relative default. Set DATABASE_PATH to a mounted
+// persistent volume when deploying to a host with ephemeral application disks.
+const DATABASE_PATH = resolve(process.env.DATABASE_PATH || "growth-tracker.db");
+const db = new Database(DATABASE_PATH);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS ambassadors (
@@ -44,6 +54,20 @@ db.exec("CREATE UNIQUE INDEX IF NOT EXISTS registrations_email_normalized ON reg
 
 function generateReferralCode() {
   return `AI-${randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+function requireAdmin(req, res, next) {
+  const adminSecret = process.env.ADMIN_SECRET;
+  if (!adminSecret) {
+    return res.status(503).json({ error: "Organizer access is disabled until ADMIN_SECRET is configured." });
+  }
+
+  const suppliedSecret = Buffer.from(req.get("X-Admin-Secret") || "");
+  const expectedSecret = Buffer.from(adminSecret);
+  if (suppliedSecret.length !== expectedSecret.length || !timingSafeEqual(suppliedSecret, expectedSecret)) {
+    return res.status(401).json({ error: "Invalid organizer secret." });
+  }
+  next();
 }
 
 app.get("/api/health", (req, res) => {
@@ -159,11 +183,15 @@ app.post("/api/registrations", (req, res) => {
   }
 });
 
-// Organizer action for this local prototype; production use should add authentication.
-app.patch("/api/registrations/:id/verify", (req, res) => {
+app.patch("/api/registrations/:id/verify", requireAdmin, (req, res) => {
+  const registrationId = Number(req.params.id);
+  if (!Number.isSafeInteger(registrationId) || registrationId < 1) {
+    return res.status(400).json({ error: "Invalid registration ID." });
+  }
+
   const result = db.prepare(
     "UPDATE registrations SET verified = 1 WHERE id = ?"
-  ).run(Number(req.params.id));
+  ).run(registrationId);
 
   if (!result.changes) {
     return res.status(404).json({ error: "Registration not found." });
@@ -171,7 +199,7 @@ app.patch("/api/registrations/:id/verify", (req, res) => {
   res.json({ message: "Registration verified." });
 });
 
-app.get("/api/registrations", (req, res) => {
+app.get("/api/registrations", requireAdmin, (req, res) => {
   const registrations = db.prepare(`
     SELECT id, name, email, college, channel, referral_code AS referralCode,
       verified, created_at AS createdAt
@@ -211,6 +239,16 @@ app.get("/api/stats", (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Growth Tracker API running at http://localhost:${PORT}`);
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "API route not found." });
+});
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(DIST_DIR));
+  app.get("/{*path}", (req, res) => res.sendFile(resolve(DIST_DIR, "index.html")));
+}
+
+app.listen(PORT, HOST, () => {
+  console.log(`Growth Tracker server listening on ${HOST}:${PORT}`);
+  console.log(`SQLite database: ${DATABASE_PATH}`);
 });

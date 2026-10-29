@@ -5,7 +5,7 @@ import {
   Camera, PlusCircle, RotateCcw, CheckCircle2,
 } from "lucide-react";
 
-const API = "http://localhost:3001/api";
+const API = "/api";
 const TARGET = 500;
 const channels = [
   { id: "WhatsApp", label: "WhatsApp communities", type: "Primary", icon: MessageCircle },
@@ -24,24 +24,36 @@ export default function App() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [adminSecret, setAdminSecret] = useState("");
   const [demoCounts, setDemoCounts] = useState({ WhatsApp: 0, "College Club": 0, Instagram: 0 });
   const [demoChannel, setDemoChannel] = useState("WhatsApp");
   const [demoCount, setDemoCount] = useState("");
 
   const refreshData = useCallback(async () => {
-    const [statsResponse, registrationsResponse, ambassadorsResponse] = await Promise.all([
-      fetch(`${API}/stats`), fetch(`${API}/registrations`), fetch(`${API}/ambassadors`),
+    const [statsResponse, ambassadorsResponse] = await Promise.all([
+      fetch(`${API}/stats`), fetch(`${API}/ambassadors`),
     ]);
-    if (![statsResponse, registrationsResponse, ambassadorsResponse].every((response) => response.ok)) {
+    if (![statsResponse, ambassadorsResponse].every((response) => response.ok)) {
       throw new Error("Could not load campaign data. Check that the API server is running.");
     }
-    const [nextStats, nextRegistrations, nextAmbassadors] = await Promise.all([
-      statsResponse.json(), registrationsResponse.json(), ambassadorsResponse.json(),
+    const [nextStats, nextAmbassadors] = await Promise.all([
+      statsResponse.json(), ambassadorsResponse.json(),
     ]);
     setStats(nextStats);
-    setRegistrations(nextRegistrations);
     setAmbassadors(nextAmbassadors);
   }, []);
+
+  async function loadRegistrations() {
+    if (!adminSecret) { setError("Enter the organizer admin secret to load student records."); return; }
+    setError("");
+    setRegistrations([]);
+    try {
+      const response = await fetch(`${API}/registrations`, { headers: { "X-Admin-Secret": adminSecret } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load student records.");
+      setRegistrations(data);
+    } catch (requestError) { setError(requestError.message); }
+  }
 
   useEffect(() => {
     Promise.resolve().then(refreshData).catch((requestError) => setError(requestError.message)).finally(() => setLoading(false));
@@ -70,11 +82,15 @@ export default function App() {
   async function verifyRegistration(id) {
     setError("");
     try {
-      const response = await fetch(`${API}/registrations/${id}/verify`, { method: "PATCH" });
+      const response = await fetch(`${API}/registrations/${id}/verify`, {
+        method: "PATCH",
+        headers: { "X-Admin-Secret": adminSecret },
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not verify registration.");
       setMessage(data.message);
       await refreshData();
+      await loadRegistrations();
     } catch (requestError) { setError(requestError.message); }
   }
 
@@ -120,7 +136,7 @@ export default function App() {
 
       <section className="panel"><div className="section-heading"><h2>Campaign channels</h2><span className="verified-label"><CheckCircle2 size={15} /> Verified database records</span></div><div className="channel-list">{channels.map(({ id, label, type, icon: Icon }) => <div className="channel-row" key={id}><div className="channel-name"><Icon size={19} /><span>{label}</span></div><div className="channel-results"><strong>{loading ? "…" : channelTotal(id)}</strong><span>{type}</span></div></div>)}</div></section>
 
-      <section className="panel"><div className="section-heading"><div><h2>Registration verification</h2><p className="muted">Organizer review for this local prototype. Verify only registrations you have checked.</p></div><span>{stats.pending} pending</span></div>{registrations.filter((item) => !item.verified).length === 0 ? <p className="muted">No registrations waiting for verification.</p> : <div className="referral-table">{registrations.filter((item) => !item.verified).map((item) => <div className="referral-row" key={item.id}><div className="ambassador-info"><strong>{item.name}</strong><span>{item.email} · {item.college}</span><code>{item.channel}{item.referralCode ? ` · ${item.referralCode}` : ""}</code></div><button type="button" className="verify-button" onClick={() => verifyRegistration(item.id)}>Verify</button></div>)}</div>}</section>
+      <section className="panel"><div className="section-heading"><div><h2>Registration verification</h2><p className="muted">Organizer review. Verify only registrations you have checked.</p></div><span>{stats.pending} pending</span></div><div className="registration-form admin-secret-form"><label htmlFor="admin-secret">Organizer admin secret</label><input id="admin-secret" type="password" autoComplete="current-password" value={adminSecret} onChange={(event) => setAdminSecret(event.target.value)} placeholder="Enter the configured ADMIN_SECRET" /><button type="button" onClick={loadRegistrations}>Load student records</button></div>{registrations.filter((item) => !item.verified).length === 0 ? <p className="muted">No registrations loaded or waiting for verification.</p> : <div className="referral-table">{registrations.filter((item) => !item.verified).map((item) => <div className="referral-row" key={item.id}><div className="ambassador-info"><strong>{item.name}</strong><span>{item.email} · {item.college}</span><code>{item.channel}{item.referralCode ? ` · ${item.referralCode}` : ""}</code></div><button type="button" className="verify-button" disabled={!adminSecret || saving} onClick={() => verifyRegistration(item.id)}>Verify</button></div>)}</div>}</section>
 
       <ReferralManager onChange={refreshData} />
 

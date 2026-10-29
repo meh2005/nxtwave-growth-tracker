@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Copy, KeyRound, PlusCircle, Users } from "lucide-react";
 
-const API = "http://localhost:3001/api";
+const API = "/api";
 
 export default function ReferralManager({ onChange }) {
   const [name, setName] = useState("");
